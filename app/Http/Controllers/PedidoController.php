@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Pedido;
+use App\Mail\PedidoCreadoMail;
+use Illuminate\Support\Facades\Mail;
 
 class PedidoController extends Controller
 {
@@ -19,7 +21,19 @@ class PedidoController extends Controller
 
     public function store(Request $request)
     {
+        // Validar los datos del pedido
+        $request->validate([
+            'producto' => 'required|string|max:255',
+            'cantidad' => 'required|integer|min:1',
+            'total' => 'required|numeric|min:0',
+        ]);
+
+        // Crear el pedido
         $pedido = Pedido::create($request->all());
+
+        // Enviar correo al administrador
+        Mail::to('admin@agriconnect.com')->send(new PedidoCreadoMail($pedido));
+
         return response()->json($pedido, 201);
     }
 
