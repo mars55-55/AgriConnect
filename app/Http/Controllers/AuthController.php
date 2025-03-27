@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use Tymon\JWTAuth\Exceptions\JWTException;
+use Illuminate\Support\Facades\Auth;
 
 class AuthController extends Controller
 {
@@ -37,31 +38,58 @@ class AuthController extends Controller
     // Inicio de sesión
     public function login(Request $request)
     {
-        $request->validate([
-            'email' => 'required|email',
-            'password' => 'required|string|min:6',
-        ]);
-
         $credentials = $request->only('email', 'password');
 
-        try {
-            if (!$token = JWTAuth::attempt($credentials)) {
-                return redirect()->back()->with('error', 'Credenciales inválidas.');
+        if (Auth::attempt($credentials)) {
+            $user = Auth::user();
+
+            // Determinar la redirección según el rol del usuario
+            $redirectUrl = '';
+            switch ($user->role) {
+                case 'admin':
+                    $redirectUrl = route('admin.dashboard'); // Ruta para el dashboard del admin
+                    break;
+                case 'agricultor':
+                    $redirectUrl = route('agricultor.dashboard'); // Ruta para el dashboard del agricultor
+                    break;
+                case 'comprador':
+                    $redirectUrl = route('comprador.dashboard'); // Ruta para el dashboard del comprador
+                    break;
+                default:
+                    $redirectUrl = route('home'); // Ruta por defecto
+                    break;
             }
 
-            $user = JWTAuth::user(); // Obtén el usuario autenticado
+            // Respuesta JSON con la URL de redirección
+            return response()->json([
+                'success' => true,
+                'message' => 'Inicio de sesión exitoso.',
+                'redirect_url' => $redirectUrl,
+            ]);
+        }
 
-            if (!$user) {
-                return response()->json(['error' => 'Usuario no autenticado'], 401);
-            }
-        } catch (JWTException $e) {
-            return response()->json(['error' => 'No se pudo crear el token'], 500);
+        // Respuesta en caso de error
+        return response()->json([
+            'success' => false,
+            'message' => 'Credenciales incorrectas.',
+        ], 401);
+    }
+
+    // Perfil del usuario autenticado
+    public function userProfile()
+    {
+        $user = Auth::user();
+
+        if (!$user) {
+            return response()->json(['error' => 'Usuario no autenticado.'], 401);
         }
 
         return response()->json([
-            'message' => 'Inicio de sesión exitoso',
-            'user' => $user,
-            'token' => $token
+            'user' => [
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => $user->role,
+            ]
         ], 200);
     }
 }

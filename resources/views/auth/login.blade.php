@@ -23,7 +23,7 @@
                 <h3>Iniciar Sesión</h3>
             </div>
             <div class="card-body">
-                <form method="POST" action="{{ route('login1') }}">
+                <form method="POST" action="{{ route('login') }}">
                     @csrf
                     <div class="mb-3">
                         <label for="email" class="form-label">Correo</label>
